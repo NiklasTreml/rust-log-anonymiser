@@ -89,7 +89,7 @@ fn main() {
 -----------| Done!! |-----------
 \tProcessed files: {}
 \tTotal: {}ms
-\tAverage speed: {}ms
+\tAverage speed: {}ms / file
 --------------------------------",
         len,
         end.duration_since(script_start).unwrap().as_millis(),

@@ -20,23 +20,31 @@ Dolore labore ex duis dolor non. Cillum consequat labore excepteur incididunt la
 Aute in fugiat fugiat excepteur non sint dolor ut id veniam nostrud. Veniam irure qui ut consectetur ex elit. Ex cupidatat veniam tempor adipisicing occaecat duis Lorem officia. Duis sunt sit enim laboris pariatur minim laborum veniam qui occaecat aliquip."
 
 # This config generates about 717Mb of logfiles
-# with 250 files 1.5Mb per logfile
+# with 500 files 1.5Mb per logfile
 content=""
 
-amntFiles=250
-length=500
+amntFiles=$1
+length=$2
+
+outputFolder=$3
 
 for i in $(seq 1 $length); do
     content="$content$ipsum"
+    echo -ne "\rAdding Content $i/$length"
 done
 
-mkdir -p testFiles2/
-mkdir -p testFiles2/nested/
+mkdir -p $outputFolder/
+mkdir -p $outputFolder/nested/
 echo "Generating $amntFiles files..."
 for i in $(seq 1 $amntFiles); do
-    echo "$content" >testFiles2/log.$i.txt &
+    echo "$content" >$outputFolder/log.$i.txt &
+    echo -ne "\rCreating file $i/$amntFiles"
 done
 
 for i in $(seq 1 $amntFiles); do
-    echo "$content" >testFiles2/nested/log.$i.txt &
+    echo "$content" >$outputFolder/nested/log.$i.txt &
+    echo -ne "\rCreating nested file $i/$amntFiles"
 done
+
+echo -e "\nDone!"
+echo "Generated $(du -sh $outputFolder/ | cut -f1) of logs"
