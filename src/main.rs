@@ -100,6 +100,18 @@ fn main() {
     let output = &args[1];
     len = file_paths.len();
 
+    if num_threads > len {
+        // prevents scheduling too many threads
+        // for example:
+        // 500 files only need 50 threads, since were working with 1 file / 1 thread
+        //
+        num_threads = len;
+        pb.set_message(format!(
+            "Reducing threads to {} because we will only work on {} files",
+            num_threads, len
+        ))
+    }
+
     thread::sleep(Duration::from_secs(1));
     pb.set_message(format!("Running with {} threads", num_threads));
     thread::sleep(Duration::from_secs(1));
