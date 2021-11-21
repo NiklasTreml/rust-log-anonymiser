@@ -5,7 +5,10 @@ use std::{
     io::{BufRead, BufReader, Read, Write},
     ops::Add,
     path::Path,
-    sync::mpsc::{self, Sender},
+    sync::{
+        mpsc::{self, Sender},
+        Arc, Barrier,
+    },
     thread,
     time::{Duration, SystemTime},
 };
@@ -13,6 +16,7 @@ use std::{
 use indicatif::{ProgressBar, ProgressStyle};
 use rand::Rng;
 use regex::Regex;
+use threadpool::ThreadPool;
 use walkdir::WalkDir;
 fn main() {
     let mut args: Vec<String> = env::args().collect();
@@ -21,7 +25,7 @@ fn main() {
     args.reverse();
     let OUTPUTPATH = args[1].clone();
     let mut len: usize = 0;
-    let mut handles = vec![];
+
     let (tx, rx) = mpsc::channel();
     // delete output folder
     let (barTx, barRx) = mpsc::channel();
@@ -85,19 +89,32 @@ fn main() {
             pb.set_message(format!("Found {} paths", file_paths.len()));
         }
     }
+    let mut num_threads = num_cpus::get() * 2;
+
+    if args.len() >= 3 {
+        num_threads = args[2]
+            .parse::<usize>()
+            .expect("Enter an integer for n_thread");
+    }
 
     let output = &args[1];
     len = file_paths.len();
 
     thread::sleep(Duration::from_secs(1));
+    pb.set_message(format!("Running with {} threads", num_threads));
+    thread::sleep(Duration::from_secs(1));
+    let worker_pool = ThreadPool::new(num_threads);
+    // let barrier = Arc::new(Barrier::new(len + 1));
+
     let script_start = SystemTime::now();
     pb.set_message("Getting to work...");
+
     for arg in file_paths {
         let sender = tx.clone();
         let barSender = barTx.clone();
         let movedOutput = output.clone();
-
-        let handle = thread::spawn(move || {
+        // let barrier = barrier.clone();
+        worker_pool.execute(move || {
             thread::sleep(Duration::from_secs(5));
             let start = SystemTime::now();
             let patterns = vec![r"[Ee]nim", r"[Aa]met"];
@@ -113,8 +130,8 @@ fn main() {
                 barSender.send(1);
             }
         });
-        handles.push(handle)
     }
+
     drop(barTx);
 
     for received in barRx {
@@ -124,10 +141,6 @@ fn main() {
     }
 
     let mut durations: Vec<u128> = vec![];
-    for handle in handles {
-        handle.join().unwrap();
-    }
-
     pb.set_style(
         ProgressStyle::default_spinner()
             // For more spinners check out the cli-spinners project:
