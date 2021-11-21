@@ -127,7 +127,6 @@ fn main() {
         let movedOutput = output.clone();
         // let barrier = barrier.clone();
         worker_pool.execute(move || {
-            thread::sleep(Duration::from_secs(5));
             let start = SystemTime::now();
             let patterns = vec![r"[Ee]nim", r"[Aa]met"];
             let replacers = vec!["ENIM_REPLACE", "AMET_REPLACE"];
