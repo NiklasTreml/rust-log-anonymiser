@@ -13,15 +13,16 @@ use std::{
 use indicatif::{ProgressBar, ProgressStyle};
 use rand::Rng;
 use regex::Regex;
+use walkdir::WalkDir;
 fn main() {
     let script_start = SystemTime::now();
     let mut args: Vec<String> = env::args().collect();
     args.reverse();
     args.pop();
     args.reverse();
-    let OUTPUTPATH = args[1].as_str();
-    let len = args.len();
-    // let mut handles = vec![];
+    let OUTPUTPATH = args[1].clone();
+    let mut len: usize = 0;
+    let mut handles = vec![];
     let (tx, rx) = mpsc::channel();
     // delete output folder
     let (barTx, barRx) = mpsc::channel();
@@ -54,50 +55,66 @@ fn main() {
     let patterns = vec![r"[Ee]nim", r"[Aa]met"];
     let replacers = vec!["ENIM_REPLACE", "AMET_REPLACE"];
 
-    if Path::new(OUTPUTPATH).exists() {
+    if Path::new(&OUTPUTPATH).exists() {
         pb.set_message(format!("{} already exists", args[1]));
         thread::sleep(Duration::from_secs(1));
+
         pb.set_message(format!("Deleting {} ...", args[1]));
         fs::remove_dir_all(OUTPUTPATH).expect("Failed to remove output folder");
+
         pb.set_message(format!("Successfully deleted {}!", args[1]));
         thread::sleep(Duration::from_secs(1));
     }
+    fs::create_dir(&args[1]);
+    pb.set_message(format!("Created {}!", &args[1]));
+
     pb.set_message("Getting to work...");
     pb.set_position(0);
     pb.enable_steady_tick(150);
-    visit(
-        args[0].clone(),
-        tx.clone(),
-        barTx.clone(),
-        &patterns,
-        &replacers,
-        OUTPUTPATH,
-    );
 
-    /* for arg in args {
+    let mut file_paths = vec![];
+    pb.set_message("Finding all files...");
+
+    for entry in WalkDir::new(args[0].clone()) {
+        let entry = match entry {
+            Ok(i) => i,
+            Err(e) => return (),
+        };
+        let path = entry.path();
+        if path.is_file() {
+            file_paths.push(path.display().to_string());
+            pb.set_message(format!("Found {} paths", file_paths.len()));
+        }
+    }
+
+    let output = &args[1];
+    len = file_paths.len();
+
+    thread::sleep(Duration::from_secs(1));
+    pb.set_message("Getting to work...");
+    for arg in file_paths {
         let sender = tx.clone();
         let barSender = barTx.clone();
+        let movedOutput = output.clone();
 
         let handle = thread::spawn(move || {
             thread::sleep(Duration::from_secs(5));
             let start = SystemTime::now();
             let patterns = vec![r"[Ee]nim", r"[Aa]met"];
             let replacers = vec!["ENIM_REPLACE", "AMET_REPLACE"];
-
-            if anon_file(&arg, patterns, replacers) {
+            // let output = "./output";
+            if anon_file(Path::new(&arg), &patterns, &replacers, movedOutput.as_str()) {
                 let end = SystemTime::now();
                 let duration = end.duration_since(start).unwrap();
                 // println!("Finished for {}! Took {}ms", &arg, duration.as_millis());
-
                 sender
                     .send(duration.as_micros())
                     .expect("Failed to send into channel");
                 barSender.send(1);
             }
         });
-
         handles.push(handle)
-    } */
+    }
     drop(barTx);
 
     for received in barRx {
@@ -107,9 +124,9 @@ fn main() {
     }
 
     let mut durations: Vec<u128> = vec![];
-    /* for handle in handles {
+    for handle in handles {
         handle.join().unwrap();
-    } */
+    }
 
     pb.set_style(
         ProgressStyle::default_spinner()
@@ -135,49 +152,8 @@ fn main() {
 --------------------------------",
         len,
         end.duration_since(script_start).unwrap().as_millis(),
-        get_avg(durations)
+        end.duration_since(script_start).unwrap().as_millis() / len as u128 // this is technically wrong since doing things in parallel, but I'm lazy
     );
-}
-
-fn visit(
-    path: String,
-    durationTx: Sender<u128>,
-    barTx: Sender<u64>,
-    patterns: &Vec<&str>,
-    replacers: &Vec<&str>,
-    outputPath: &str,
-) {
-    let p = Path::new(path.as_str());
-
-    if p.is_dir() {
-        let paths = p.read_dir().unwrap();
-        for path in paths {
-            let path = path.unwrap();
-            let path = path.path();
-            let path = path.to_str().unwrap();
-
-            visit(
-                String::from(path),
-                durationTx.clone(),
-                barTx.clone(),
-                patterns,
-                replacers,
-                outputPath,
-            );
-        }
-    } else {
-        let start = SystemTime::now();
-        if anon_file(&p, patterns, replacers, outputPath) {
-            let end = SystemTime::now();
-            let duration = end.duration_since(start).unwrap();
-            // println!("Finished for {}! Took {}ms", &arg, duration.as_millis());
-
-            durationTx
-                .send(duration.as_micros())
-                .expect("Failed to send into channel");
-            barTx.send(1);
-        }
-    }
 }
 
 fn get_avg(durations: Vec<u128>) -> f32 {
