@@ -214,6 +214,7 @@ fn save_to_file(content: String, path: &Path, outputPath: &str) {
 
     let mut new_f = File::create(new_filepath).unwrap();
     new_f.write_all(content.as_bytes()).unwrap();
+    drop(new_f);
 }
 fn read_from_file(filepath: &Path) -> String {
     //println!("Running for {:?}", filepath);
@@ -221,5 +222,6 @@ fn read_from_file(filepath: &Path) -> String {
     let mut f = File::open(filepath).expect("Could not open file.");
     let mut buf = String::new();
     f.read_to_string(&mut buf).expect("Could not read file");
+    drop(f);
     buf
 }
