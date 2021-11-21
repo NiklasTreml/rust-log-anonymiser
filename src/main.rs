@@ -1,8 +1,8 @@
 use core::time;
 use std::{
     env, fs,
-    fs::{DirEntry, File},
-    io::{Read, Write},
+    fs::{DirEntry, File, OpenOptions},
+    io::{BufRead, BufReader, Read, Write},
     ops::Add,
     path::Path,
     sync::mpsc::{self, Sender},
@@ -15,7 +15,6 @@ use rand::Rng;
 use regex::Regex;
 use walkdir::WalkDir;
 fn main() {
-    let script_start = SystemTime::now();
     let mut args: Vec<String> = env::args().collect();
     args.reverse();
     args.pop();
@@ -91,6 +90,7 @@ fn main() {
     len = file_paths.len();
 
     thread::sleep(Duration::from_secs(1));
+    let script_start = SystemTime::now();
     pb.set_message("Getting to work...");
     for arg in file_paths {
         let sender = tx.clone();
@@ -172,17 +172,26 @@ fn anon_file(path: &Path, patterns: &Vec<&str>, replacers: &Vec<&str>, outputPat
         // println!("Skipping folder {:?}...", path);
         return false;
     }
-    let mut content = read_from_file(path);
+    // let mut content = read_from_file(path);
+
     // for every regex => modify(&variable) <- in place
-    for (i, pattern) in patterns.iter().enumerate() {
-        modify(
-            &mut content,
-            &replacers[i],
-            Regex::new(pattern).expect("Regex invalid"),
-        );
+
+    let file = File::open(path).expect("Could not open file");
+    let reader = BufReader::new(file);
+
+    for line in reader.lines() {
+        let mut content = line.unwrap();
+
+        for (i, pattern) in patterns.iter().enumerate() {
+            modify(
+                &mut content,
+                &replacers[i],
+                Regex::new(pattern).expect("Regex invalid"),
+            );
+            // save_to_file(&variable)
+        }
+        save_to_file(content.clone(), path, outputPath);
     }
-    // save_to_file(&variable)
-    save_to_file(content, path, outputPath);
     return true;
 }
 
@@ -212,10 +221,17 @@ fn save_to_file(content: String, path: &Path, outputPath: &str) {
 
     fs::create_dir_all(new_filepath.parent().unwrap()).expect("Could not create directory");
 
-    let mut new_f = File::create(new_filepath).unwrap();
-    new_f.write_all(content.as_bytes()).unwrap();
+    let mut new_f = OpenOptions::new()
+        .append(true)
+        .write(true)
+        .create(true)
+        .open(new_filepath)
+        .unwrap();
+
+    writeln!(new_f, "{}", &content).unwrap();
     drop(new_f);
 }
+
 fn read_from_file(filepath: &Path) -> String {
     //println!("Running for {:?}", filepath);
 
