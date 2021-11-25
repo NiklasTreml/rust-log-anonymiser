@@ -1,9 +1,3 @@
-cargo run --release $(find testFiles/)
+`cargo run --release targetFolder/ outputFolder/ \<numThreads>`
 
-### OR
-
-cargo run --release testFiles/\*\*/\*
-
-### OR
-
-cargo run --release file1 file2 ... fileN
+The program will remove the outputFolder and then recreate it with the new files
