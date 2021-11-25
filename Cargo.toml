@@ -1,5 +1,5 @@
 [package]
-name = "lAnon"
+name = "log_anon"
 version = "0.1.0"
 edition = "2018"
 

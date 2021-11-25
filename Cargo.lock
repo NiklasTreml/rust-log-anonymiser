@@ -69,18 +69,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "lAnon"
-version = "0.1.0"
-dependencies = [
- "indicatif",
- "num_cpus",
- "rand",
- "regex",
- "threadpool",
- "walkdir",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -91,6 +79,18 @@ name = "libc"
 version = "0.2.107"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbe5e23404da5b4f555ef85ebed98fb4083e55a00c317800bc2a50ede9f3d219"
+
+[[package]]
+name = "log_anon"
+version = "0.1.0"
+dependencies = [
+ "indicatif",
+ "num_cpus",
+ "rand",
+ "regex",
+ "threadpool",
+ "walkdir",
+]
 
 [[package]]
 name = "memchr"
