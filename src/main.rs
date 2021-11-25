@@ -92,6 +92,9 @@ fn main() {
     pb.set_message("Finding all files...");
 
     for entry in WalkDir::new(args[0].clone()) {
+        // find all the files in the target folder and add them to a vector
+        // we could also already start working on them here, but multithreading inside of recursive function is a mess
+        // so we're doing that later
         let entry = match entry {
             Ok(i) => i,
             Err(_e) => return,
